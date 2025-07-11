@@ -217,6 +217,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import {
   exportDataToFile,
@@ -227,57 +228,79 @@ import { useMapContext } from '../Context/MapContext';
 
 const CustomDrawerContent = (props) => {
   const {
+      webviewRef, viewShotRef,
     countryCategoryMap, setCountryCategoryMap,
-    countryCounts, setCountryCounts,
-    legendLabels, setLegendLabels,
+    countryCounts, setCountryCounts, categoryCountries, setCategoryCountries, 
+    legendLabels, setLegendLabels, countryToContinentMap, setCountryToContinentMap,
   } = useMapContext();
+const handleImport = async () => {
+  try {
+    const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+    
+    const content = await FileSystem.readAsStringAsync(result.assets[0].uri);
+    const parsed = JSON.parse(content);
+    console.log("Parsed JSON:", parsed);
 
- const handleImport = async () => {
-  const imported = await importDataFromFile();
-  if (imported) {
-    setCountryCategoryMap(imported.countryCategoryMap || {});
-    setCountryCounts(imported.countryCounts || {});
-    setLegendLabels(imported.legendLabels || {});
+    if (parsed.countryCategoryMap) {
+      setCountryCategoryMap(parsed.countryCategoryMap);
+      setCategoryCountries(parsed.countryCategoryMap); // ✅ for list
+    }
+    if (parsed.countryCounts) {
+      setCountryCounts(parsed.countryCounts);
+    }
+    if (parsed.legendLabels) {
+      setLegendLabels(parsed.legendLabels);
+    }
+    if (parsed.countryToContinentMap) {
+      setCountryToContinentMap(parsed.countryToContinentMap);
+    }
 
-    // Update map colors
-    if (props.webviewRef?.current) {
-      Object.keys(imported.countryCategoryMap).forEach(category => {
-        const countries = imported.countryCategoryMap[category];
-        const color = categoryColors[category] || '#ccc';
-
-        Object.keys(countries).forEach(country => {
-          const js = `
+    // ✅ Repaint map based on new data
+    Object.entries(parsed.countryCategoryMap || {}).forEach(([category, countries]) => {
+      const color = parsed.legendLabels?.[category] || categoryColors[category] || '#C0C0C0';
+      Object.keys(countries).forEach((country) => {
+        if (webviewRef?.current) {
+          webviewRef.current.injectJavaScript(`
             if (countryLayers["${country}"]) {
               countryLayers["${country}"].setStyle({ fillColor: "${color}" });
             }
-          `;
-          props.webviewRef.current.injectJavaScript(js);
-        });
+            true;
+          `);
+        }
       });
-    }
+    });
 
-    Alert.alert("Imported", "Data imported and map updated.");
+    Alert.alert("Success", "Data imported and applied.");
+  } catch (error) {
+    console.error("Error in importDataFromFile:", error);
+    Alert.alert("Import failed", "Something went wrong.");
   }
 };
 
+
+
 const handleClear = () => {
-  setCountryCategoryMap({
+  const clearedMap = {
     'List 1 (Sun)': {},
     'List 2 (Air)': {},
     'List 3 (Trees)': {},
     'List 4 (Land)': {},
     'List 5 (Water)': {},
     'List 6 (Core)': {},
-  });
+  };
+  setCountryCategoryMap(clearedMap);
+  setCategoryCountries(clearedMap); // ✅ reset list view
   setCountryCounts({});
   setLegendLabels({});
 
-  // Reset WebView map fill colors (by sending message to WebView)
-  if (props.webviewRef?.current) {
-    props.webviewRef.current.injectJavaScript(`
-      Object.values(countryLayers).forEach(layer => {
-        layer.setStyle({ fillColor: '#C0C0C0' });
-      });
+  if (webviewRef?.current) {
+    webviewRef.current.injectJavaScript(`
+      if (typeof countryLayers === 'object') {
+        Object.values(countryLayers).forEach(layer => {
+          layer.setStyle({ fillColor: '#C0C0C0' });
+        });
+      }
       true;
     `);
   }
@@ -286,23 +309,22 @@ const handleClear = () => {
 };
 
 
-  const handleExportExcel = async () => {
-    await exportToExcel(countryCategoryMap);
-  };
 
 const handleSaveImage = async () => {
   try {
-    if (props.viewShotRef?.current) {
-      const uri = await props.viewShotRef.current.capture();
+    if (viewShotRef?.current) {
+      const uri = await viewShotRef.current.capture();
       await Sharing.shareAsync(uri);
     } else {
       Alert.alert("Error", "Map reference not available.");
     }
   } catch (error) {
     Alert.alert("Error", "Failed to capture map image.");
-    console.log(error);
+    console.error(error);
   }
 };
+
+
   return (
     <DrawerContentScrollView {...props} contentContainerStyle={{ flex: 1 }}>
       <DrawerItemList {...props} />
@@ -310,7 +332,8 @@ const handleSaveImage = async () => {
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.button, styles.blue]}
-          onPress={() => exportDataToFile(countryCategoryMap, countryCounts, legendLabels)}
+          onPress={() => exportDataToFile(countryCategoryMap, countryCounts, legendLabels, countryToContinentMap)}
+
         >
           <Icon name="save" size={16} color="#fff" />
           <Text style={styles.text}>Save</Text>
@@ -334,7 +357,8 @@ const handleSaveImage = async () => {
 
         <TouchableOpacity
           style={[styles.button, styles.purple]}
-          onPress={handleExportExcel}
+          onPress={() => exportToExcel(countryCategoryMap, countryToContinentMap)}
+
         >
           <Icon name="file-excel-o" size={16} color="#fff" />
           <Text style={styles.text}>Excel</Text>

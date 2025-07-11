@@ -24,15 +24,23 @@ const viewShotRef=React.useRef();
   return (
     <MapProvider>
         <NavigationContainer>
-      <Drawer.Navigator drawerContent={(props) => <CustomDrawerContent {...props} webviewRef={webviewRef}
-      viewShotRef={viewShotRef} />}>
+      <Drawer.Navigator drawerContent={(props) => <CustomDrawerContent {...props} webviewRef={webviewRef} viewShotRef={viewShotRef}
+       />}>
         <Drawer.Screen name="Setting" component={SettingsScreen} />
         {/* <Drawer.Screen name="Settings" component={SettingsScreen} /> */}
-        <Drawer.Screen
-          name="Mark"
-          component={MapScreen}
-          options={{ headerShown: false }}  
-        />
+       <Drawer.Screen
+  name="Mark"
+  options={{ headerShown: false }}
+>
+  {(props) => (
+    <MapScreen
+      {...props}
+      webviewRef={webviewRef}
+      viewShotRef={viewShotRef}
+    />
+  )}
+</Drawer.Screen>
+
           <Drawer.Screen
           name="Know"
           component={Know}

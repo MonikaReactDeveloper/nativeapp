@@ -41,11 +41,12 @@ import * as Sharing from 'expo-sharing';
 import XLSX from 'xlsx';
 
 // Save JSON
-export const exportDataToFile = async (mapData, counts, labels) => {
+export const exportDataToFile = async (mapData, counts, labels, countryToContinentMap) => {
   const data = {
     countryCategoryMap: mapData,
     countryCounts: counts,
     legendLabels: labels,
+    countryToContinentMap: countryToContinentMap,
   };
 
   const json = JSON.stringify(data, null, 2);
@@ -53,25 +54,45 @@ export const exportDataToFile = async (mapData, counts, labels) => {
   await FileSystem.writeAsStringAsync(fileUri, json);
   await Sharing.shareAsync(fileUri);
 };
-
 // Import JSON
 export const importDataFromFile = async () => {
-  const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
+  try {
+    const result = await DocumentPicker.getDocumentAsync({ 
+  type: ['application/json', 'text/json'], 
+  copyToCacheDirectory: true 
+});
 
-  if (result.type === 'success') {
-    const content = await FileSystem.readAsStringAsync(result.uri);
-    return JSON.parse(content);
+    const fileUri = result.assets?.[0]?.uri || result.uri;
+
+    if (!fileUri || result.canceled) {
+      console.warn("No file selected or cancelled");
+      return null;
+    }
+
+    const content = await FileSystem.readAsStringAsync(fileUri);
+    try {
+      const parsed = JSON.parse(content);
+      return parsed;
+    } catch (e) {
+      console.error("Invalid JSON:", e);
+      Alert.alert("Import Failed", "Selected file does not contain valid JSON.");
+      return null;
+    }
+  } catch (error) {
+    console.error("Import error:", error);
+    Alert.alert("Error", "Failed to import data.");
+    return null;
   }
-  return null;
 };
 
 // Export to Excel
-export const exportToExcel = async (mapData) => {
+export const exportToExcel = async (mapData, countryToContinentMap) => {
   const dataArray = [];
 
   Object.keys(mapData).forEach((category) => {
     Object.entries(mapData[category]).forEach(([country, count]) => {
-      dataArray.push({ Category: category, Country: country, Count: count });
+      const continent = countryToContinentMap[country] || 'Unknown';
+      dataArray.push({ Category: category, Country: country, Count: count, Continent: continent });
     });
   });
 
@@ -85,3 +106,4 @@ export const exportToExcel = async (mapData) => {
   await FileSystem.writeAsStringAsync(fileUri, excelBinary, { encoding: FileSystem.EncodingType.Base64 });
   await Sharing.shareAsync(fileUri);
 };
+

@@ -58,10 +58,18 @@ const MapContext = createContext();
 export const MapProvider = ({ children }) => {
   const webviewRef = useRef(null);
   const viewShotRef = useRef(null);
-
+const [countryToContinentMap, setCountryToContinentMap] = useState({});
   const [countryCategoryMap, setCountryCategoryMap] = useState({});
   const [countryCounts, setCountryCounts] = useState({});
   const [legendLabels, setLegendLabels] = useState({});
+const [categoryCountries, setCategoryCountries] = useState({
+  'List 1 (Sun)': {},
+  'List 2 (Air)': {},
+  'List 3 (Trees)': {},
+  'List 4 (Land)': {},
+  'List 5 (Water)': {},
+  'List 6 (Core)': {},
+});
 
   // 🔽 Add this image state
   const [images, setImages] = useState({
@@ -73,6 +81,7 @@ export const MapProvider = ({ children }) => {
     adBanner1: null,
     adBanner2: null,
   });
+
 
   const saveImages = (newImages) => {
     setImages(newImages);
@@ -86,8 +95,9 @@ export const MapProvider = ({ children }) => {
       setCountryCategoryMap,
       countryCounts,
       setCountryCounts,
-      legendLabels,
+      legendLabels, categoryCountries, setCategoryCountries, 
       setLegendLabels,
+       countryToContinentMap, setCountryToContinentMap,
       images, // ⬅ exposed globally
       saveImages, // ⬅ exposed globally
     }}>

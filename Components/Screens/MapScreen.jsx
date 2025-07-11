@@ -1733,9 +1733,8 @@ const continentColors = {
 
 const MapScreen = ({ navigation }) => {
 //  const { categoryCountry, setCategoryCountry } = useMapContext();
-const { countryCategoryMap, setCountryCategoryMap, countryCounts, setCountryCounts, legendLabels, setLegendLabels } = useMapContext();
-const viewShotRef = useRef();
-  const webviewRef = useRef();
+const { countryCategoryMap, setCountryCategoryMap, countryCounts, setCountryCounts, legendLabels, setLegendLabels, countryToContinentMap, setCountryToContinentMap, } = useMapContext();
+const { webviewRef, viewShotRef } = useMapContext();
   const { width, height } = useWindowDimensions();
   const isPortrait = height >= width;
 const[allCountryNames,setAllCountryNames]=useState([]);
@@ -1748,6 +1747,15 @@ const [countryCoordinates, setCountryCoordinates] = useState({});
    const [continentCountryMap, setContinentCountryMap] = useState({});
   const [countryClickCounts, setCountryClickCounts] = useState({});
   const [selectedContinent, setSelectedContinent] = useState(null);
+  const CONTINENT_TO_CATEGORY_MAP = {
+  Asia: 'List 1 (Sun)',
+  Europe: 'List 2 (Air)',
+  Africa: 'List 3 (Trees)',
+  Australia: 'List 4 (Land)',
+  North_America: 'List 5 (Water)',
+  South_America: 'List 6 (Core)',
+};
+
 const [categoryNames, setCategoryNames] = useState({
   'List 1 (Sun)': 'List 1 (Sun)',
   'List 2 (Air)': 'List 2 (Air)',
@@ -1784,23 +1792,34 @@ useEffect(() => {
   };
   fetchData();
 }, []);
-
-
 const incrementCountryCount = (country) => {
-  // Find the continent
   const continent = Object.keys(continentCountryMap).find((cont) =>
     continentCountryMap[cont].includes(country)
   );
 
-  const color = continentColors[continent] || '#C0C0C0';
+  if (!continent) return;
 
-  // 🔁 Update count for display
-  setCountryClickCounts((prev) => ({
+  const categoryKey = CONTINENT_TO_CATEGORY_MAP[continent] || 'List 1 (Sun)';
+  const color = categoryColors[categoryKey] || '#C0C0C0';
+
+  // Save continent info
+  setCountryToContinentMap(prev => ({
+    ...prev,
+    [country]: continent,
+  }));
+
+  setCountryClickCounts(prev => ({
     ...prev,
     [country]: (prev[country] || 0) + 1,
   }));
 
-  // ✅ Color the country on the map
+  setCountryCategoryMap(prev => {
+    const updated = { ...prev };
+    if (!updated[categoryKey]) updated[categoryKey] = {};
+    updated[categoryKey][country] = (updated[categoryKey][country] || 0) + 1;
+    return updated;
+  });
+
   if (webviewRef?.current) {
     webviewRef.current.injectJavaScript(`
       markCountryWithColor(${JSON.stringify(country)}, ${JSON.stringify(color)});
@@ -1808,6 +1827,23 @@ const incrementCountryCount = (country) => {
     `);
   }
 };
+
+
+useEffect(() => {
+  const newCounts = {};
+  Object.keys(countryCategoryMap).forEach((category) => {
+    Object.entries(countryCategoryMap[category]).forEach(([country, count]) => {
+      newCounts[country] = (newCounts[country] || 0) + count;
+    });
+  });
+  setCountryCounts(newCounts);
+
+  const labels = {};
+  Object.keys(countryCategoryMap).forEach((category) => {
+    labels[category] = categoryColors[category] || continentColors[category.replace('Continent: ', '')] || '#C0C0C0';
+  });
+  setLegendLabels(labels);
+}, [countryCategoryMap]);
 
 useEffect(() => {
   const fetchData = async () => {
@@ -1851,26 +1887,51 @@ useEffect(() => {
 }
 
   };
-  useEffect(() => {
-  setCountryCategoryMap(categoryCountries);
+//  useEffect(() => {
+//   setCountryCategoryMap(categoryCountries);
 
-  // Optional: auto-calculate counts per country
+//   const newCounts = {};
+//   Object.keys(categoryCountries).forEach((category) => {
+//     Object.entries(categoryCountries[category]).forEach(([country, count]) => {
+//       newCounts[country] = (newCounts[country] || 0) + count;
+//     });
+//   });
+//   setCountryCounts(newCounts);
+
+//   const labels = {};
+//   Object.keys(categoryCountries).forEach((category) => {
+//     labels[category] = categoryColors[category];
+//   });
+
+//   Object.keys(countryCategoryMap).forEach((category) => {
+//     if (!labels[category]) {
+//       labels[category] = categoryColors[category] || '#C0C0C0';
+//     }
+//   });
+
+//   setLegendLabels(labels);
+// }, [categoryCountries, countryCategoryMap]);
+// When countryCategoryMap updates (including from import), update counts and labels
+useEffect(() => {
   const newCounts = {};
-  Object.keys(categoryCountries).forEach((category) => {
-    Object.entries(categoryCountries[category]).forEach(([country, count]) => {
+  const labels = {};
+
+  Object.entries(countryCategoryMap).forEach(([category, countries]) => {
+    Object.entries(countries).forEach(([country, count]) => {
       newCounts[country] = (newCounts[country] || 0) + count;
     });
+    labels[category] = categoryColors[category] || '#C0C0C0';
   });
+
   setCountryCounts(newCounts);
-
-  // Set colors used
-  const labels = {};
-  Object.keys(categoryCountries).forEach((category) => {
-    labels[category] = categoryColors[category];
-  });
   setLegendLabels(labels);
+}, [countryCategoryMap]);
 
-}, [categoryCountries]);
+// Set categoryCountries only if you want to re-sync UI from data
+useEffect(() => {
+  setCategoryCountries(countryCategoryMap);
+}, [countryCategoryMap]);
+
 
 useEffect(() => {
   if (search.trim() === '') {
@@ -1954,6 +2015,7 @@ const handleZoomToCountry = (countryName) => {
     let selectedColor = '#fbc276';
 
     const map = L.map('map', {
+      zoomControl: false,
       zoomSnap: 0.1,
       zoomDelta: 0.1,
       maxZoom: 10,
@@ -1965,6 +2027,7 @@ const handleZoomToCountry = (countryName) => {
     L.tileLayer('', {}).addTo(map);
 
     const countryLayers = {};
+    window.countryLayers = countryLayers;
 
     function style(feature) {
       return { fillColor: '#C0C0C0', color: 'white', weight: 1, fillOpacity: 1 };
@@ -2215,15 +2278,21 @@ window.markCountryWithColor = markCountryWithColor;
         </View>
 
         <View style={styles.map}>
-          {/* <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9 }}> */}
+          <ViewShot
+  ref={viewShotRef}
+  options={{ format: "jpg", quality: 0.9 }}
+  style={{ flex: 1 }} // full width & height
+>
           <WebView
             ref={webviewRef}
             originWhitelist={['*']}
             onMessage={handleMessage}
             javaScriptEnabled
             source={{ html: leafletHTML }}
+            domStorageEnabled
+    allowFileAccess
           />
-          {/* </ViewShot> */}
+          </ViewShot>
         </View>
       
 
@@ -2268,7 +2337,7 @@ window.markCountryWithColor = markCountryWithColor;
             <Text style={styles.plusIcon}>➕</Text>
           </TouchableOpacity>
 
-          {/* 📍 Location Icon */}
+
           <TouchableOpacity
             onPress={() => handleZoomToCountry(name)}
             style={styles.iconButton}
@@ -2288,22 +2357,26 @@ window.markCountryWithColor = markCountryWithColor;
         </ScrollView>
 
            <View style={styles.addarea}>
-            <Image
-                     source={images.adBanner1 ? { uri: images.adBanner1 } : require('../Screens/assets/logo.png')}
-                     style={styles.adbanner}
-                   />
-           <Image
-                    source={images.adBanner2 ? { uri: images.adBanner2 } :  require('../Screens/assets/logo.png')}
-                   style={styles.adbanner}
-                  />
+           
+                    {images.adBanner1 ? (
+          <Image source={{ uri: images.adBanner1 }} style={styles.add} />
+        ) : (
+          <Text ></Text>
+        )}
+           
+                    {images.adBanner2 ? (
+          <Image source={{ uri: images.adBanner2 }} style={styles.add} />
+        ) : (
+          <Text ></Text>
+        )}
           </View>
       </>
     );
   } else {
-    // LANDSCAPE view
+
     return (
       <View style={styles.landscapeWrapper}>
-        {/* LEFT SIDE */}
+
         <View style={styles.leftPane}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.openDrawer()}>
