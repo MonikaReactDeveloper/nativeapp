@@ -3,12 +3,12 @@
     "name": "demo",
     "slug": "demo",
     "version": "1.0.0",
-   "orientation": "default",
-    "icon": "./../assets/icon.png",
+    "orientation": "default",
+    "icon": "./Components/Screens/assets/icon.jpg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./Components/Screens/assets/icon.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -16,19 +16,25 @@
       "supportsTablet": true
     },
     "android": {
-       "permissions": [
-    "WRITE_EXTERNAL_STORAGE",
-    "READ_EXTERNAL_STORAGE",
-    "MEDIA_LIBRARY"
-  ],
+      "permissions": [
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE",
+        "MEDIA_LIBRARY"
+      ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./Components/Screens/assets/icon.jpg",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.monika1506.demo"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "/Components/Screens/assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4998b54e-8d5b-4934-9e32-a58b6d322939"
+      }
     }
   }
 }

@@ -231,34 +231,27 @@ const CustomDrawerContent = (props) => {
       webviewRef, viewShotRef,
     countryCategoryMap, setCountryCategoryMap,
     countryCounts, setCountryCounts, categoryCountries, setCategoryCountries, 
-    legendLabels, setLegendLabels, countryToContinentMap, setCountryToContinentMap,
+    legendLabels, setLegendLabels, countryToContinentMap, setCountryToContinentMap,categoryColors
   } = useMapContext();
 const handleImport = async () => {
   try {
-    const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
-    if (result.canceled || !result.assets?.[0]?.uri) return;
-    
-    const content = await FileSystem.readAsStringAsync(result.assets[0].uri);
-    const parsed = JSON.parse(content);
-    console.log("Parsed JSON:", parsed);
+    const parsed = await importDataFromFile();
 
-    if (parsed.countryCategoryMap) {
-      setCountryCategoryMap(parsed.countryCategoryMap);
-      setCategoryCountries(parsed.countryCategoryMap); // ✅ for list
-    }
-    if (parsed.countryCounts) {
-      setCountryCounts(parsed.countryCounts);
-    }
-    if (parsed.legendLabels) {
-      setLegendLabels(parsed.legendLabels);
-    }
-    if (parsed.countryToContinentMap) {
-      setCountryToContinentMap(parsed.countryToContinentMap);
+    if (!parsed || !parsed.countryCategoryMap) {
+      Alert.alert("Invalid File", "No valid data found.");
+      return;
     }
 
-    // ✅ Repaint map based on new data
-    Object.entries(parsed.countryCategoryMap || {}).forEach(([category, countries]) => {
-      const color = parsed.legendLabels?.[category] || categoryColors[category] || '#C0C0C0';
+    // Update both once to prevent looping
+    setCountryCategoryMap(parsed.countryCategoryMap);
+    setCategoryCountries(parsed.countryCategoryMap);
+    setCountryCounts(parsed.countryCounts || {});
+    setLegendLabels(parsed.legendLabels || {});
+    setCountryToContinentMap(parsed.countryToContinentMap || {});
+
+    // Re-color countries
+    Object.entries(parsed.countryCategoryMap).forEach(([category, countries]) => {
+      const color = categoryColors[category] || '#C0C0C0';
       Object.keys(countries).forEach((country) => {
         if (webviewRef?.current) {
           webviewRef.current.injectJavaScript(`
@@ -271,42 +264,43 @@ const handleImport = async () => {
       });
     });
 
-    Alert.alert("Success", "Data imported and applied.");
+    Alert.alert("Success", "Data imported successfully");
   } catch (error) {
-    console.error("Error in importDataFromFile:", error);
-    Alert.alert("Import failed", "Something went wrong.");
+    console.error("Import failed:", error);
+    Alert.alert("Import Failed", "Something went wrong.");
   }
 };
 
 
 
-const handleClear = () => {
-  const clearedMap = {
-    'List 1 (Sun)': {},
-    'List 2 (Air)': {},
-    'List 3 (Trees)': {},
-    'List 4 (Land)': {},
-    'List 5 (Water)': {},
-    'List 6 (Core)': {},
-  };
-  setCountryCategoryMap(clearedMap);
-  setCategoryCountries(clearedMap); // ✅ reset list view
-  setCountryCounts({});
-  setLegendLabels({});
 
-  if (webviewRef?.current) {
-    webviewRef.current.injectJavaScript(`
-      if (typeof countryLayers === 'object') {
-        Object.values(countryLayers).forEach(layer => {
-          layer.setStyle({ fillColor: '#C0C0C0' });
-        });
-      }
-      true;
-    `);
-  }
+// const handleClear = () => {
+//   const clearedMap = {
+//     'List 1 (Sun)': {},
+//     'List 2 (Air)': {},
+//     'List 3 (Trees)': {},
+//     'List 4 (Land)': {},
+//     'List 5 (Water)': {},
+//     'List 6 (Core)': {},
+//   };
+//   setCountryCategoryMap(clearedMap);
+//   setCategoryCountries(clearedMap); // ✅ reset list view
+//   setCountryCounts({});
+//   setLegendLabels({});
 
-  Alert.alert("Cleared", "Map and data have been reset.");
-};
+//   if (webviewRef?.current) {
+//     webviewRef.current.injectJavaScript(`
+//       if (typeof countryLayers === 'object') {
+//         Object.values(countryLayers).forEach(layer => {
+//           layer.setStyle({ fillColor: '#C0C0C0' });
+//         });
+//       }
+//       true;
+//     `);
+//   }
+
+//   Alert.alert("Cleared", "Map and data have been reset.");
+// };
 
 
 
@@ -347,13 +341,7 @@ const handleSaveImage = async () => {
           <Text style={styles.text}>Import</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.button, styles.red]}
-          onPress={handleClear}
-        >
-          <Icon name="trash" size={16} color="#fff" />
-          <Text style={styles.text}>Clear</Text>
-        </TouchableOpacity>
+     
 
         <TouchableOpacity
           style={[styles.button, styles.purple]}
@@ -369,7 +357,7 @@ const handleSaveImage = async () => {
           onPress={handleSaveImage}
         >
           <Icon name="camera" size={16} color="#fff" />
-          <Text style={styles.text}>BTN</Text>
+          <Text style={styles.text}>Capture</Text>
         </TouchableOpacity>
       </View>
     </DrawerContentScrollView>

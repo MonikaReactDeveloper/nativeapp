@@ -40,6 +40,18 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import XLSX from 'xlsx';
 
+const getFormattedDateTime = () => {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0'); // Months start at 0
+  const yy = String(now.getFullYear()).slice(-2);
+  const hh = String(now.getHours()).padStart(2, '0');
+  const min = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+
+  return `${dd}${mm}${yy}_${hh}${min}${ss}`;
+};
+
 // Save JSON
 export const exportDataToFile = async (mapData, counts, labels, countryToContinentMap) => {
   const data = {
@@ -50,10 +62,13 @@ export const exportDataToFile = async (mapData, counts, labels, countryToContine
   };
 
   const json = JSON.stringify(data, null, 2);
-  const fileUri = `${FileSystem.documentDirectory}mapData.json`;
+  const timestamp = getFormattedDateTime();
+  const fileUri = `${FileSystem.documentDirectory}mark_${timestamp}.json`;
+
   await FileSystem.writeAsStringAsync(fileUri, json);
   await Sharing.shareAsync(fileUri);
 };
+
 // Import JSON
 export const importDataFromFile = async () => {
   try {
@@ -101,9 +116,10 @@ export const exportToExcel = async (mapData, countryToContinentMap) => {
   XLSX.utils.book_append_sheet(workbook, worksheet, "MapData");
 
   const excelBinary = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
-  const fileUri = `${FileSystem.documentDirectory}mapData.xlsx`;
+
+  const timestamp = getFormattedDateTime();
+  const fileUri = `${FileSystem.documentDirectory}mark_${timestamp}.xlsx`;
 
   await FileSystem.writeAsStringAsync(fileUri, excelBinary, { encoding: FileSystem.EncodingType.Base64 });
   await Sharing.shareAsync(fileUri);
 };
-

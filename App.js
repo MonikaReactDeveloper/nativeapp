@@ -11,8 +11,9 @@ import CustomDrawerContent from './Components/Screens/CustomDrawerContent';
 import { MapProvider } from './Components/Context/MapContext';
 import Know from './Components/Screens/Know';
 import Play from './Components/Screens/Play';
-
-
+import AppSetting from './Components/Screens/AppSetting';
+import { AppSettingProvider } from './Components/Context/AppSettingContext';
+import LoginScreen from './Components/Screens/LoginScreen';
 
 
 const Drawer = createDrawerNavigator();
@@ -22,12 +23,27 @@ export default function App() {
   const webviewRef=React.useRef();
 const viewShotRef=React.useRef();
   return (
+
+    <AppSettingProvider>
     <MapProvider>
         <NavigationContainer>
       <Drawer.Navigator drawerContent={(props) => <CustomDrawerContent {...props} webviewRef={webviewRef} viewShotRef={viewShotRef}
        />}>
-        <Drawer.Screen name="Setting" component={SettingsScreen} />
-        {/* <Drawer.Screen name="Settings" component={SettingsScreen} /> */}
+        <Drawer.Screen name="Home" component={HomeScreen}  options={{ headerShown: false }}   />
+        <Drawer.Screen name="Settings" component={SettingsScreen}  options={{ 
+    drawerItemStyle: { display: 'none' }, // hides it from drawer
+    // optional, if you want to hide header
+  }}  />
+             <Drawer.Screen name="AppSettings" component={AppSetting} options={{ 
+    drawerItemStyle: { display: 'none' }, // hides it from drawer
+// optional, if you want to hide header
+  }}/>
+                {/* <Drawer.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ headerShown: false }}  // ✅ Hide default header with hamburger
+        /> */}
+         {/* <Drawer.Screen name="AppSettings" component={AppSetting} /> */}
        <Drawer.Screen
   name="Mark"
   options={{ headerShown: false }}
@@ -54,5 +70,6 @@ const viewShotRef=React.useRef();
         </Drawer.Navigator>
          </NavigationContainer>
           </MapProvider> 
+          </AppSettingProvider>
   );
 }

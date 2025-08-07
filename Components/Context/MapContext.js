@@ -70,7 +70,14 @@ const [categoryCountries, setCategoryCountries] = useState({
   'List 5 (Water)': {},
   'List 6 (Core)': {},
 });
-
+  const categoryColors = {
+    'List 1 (Sun)': '#fbc276',
+    'List 2 (Air)': '#FFFFFF',
+    'List 3 (Trees)': '#66cc66',
+    'List 4 (Land)': '#ffff66',
+    'List 5 (Water)': '#1338BE',
+    'List 6 (Core)': '#ff3333',
+  };
   // 🔽 Add this image state
   const [images, setImages] = useState({
     companyBanner: null,
@@ -94,7 +101,7 @@ const [categoryCountries, setCategoryCountries] = useState({
       countryCategoryMap,
       setCountryCategoryMap,
       countryCounts,
-      setCountryCounts,
+      setCountryCounts, categoryColors,
       legendLabels, categoryCountries, setCategoryCountries, 
       setLegendLabels,
        countryToContinentMap, setCountryToContinentMap,
